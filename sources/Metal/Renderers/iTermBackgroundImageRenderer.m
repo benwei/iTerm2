@@ -46,9 +46,11 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
                                  completion:(void (^)(__kindof iTermMetalRendererTransientState * _Nonnull))completion {
     [_metalRenderer createTransientStateForViewportSize:viewportSize
+                                                  scale:scale
                                           commandBuffer:commandBuffer
                                              completion:^(__kindof iTermMetalRendererTransientState * _Nonnull transientState) {
                                                  [self initializeTransientState:transientState];

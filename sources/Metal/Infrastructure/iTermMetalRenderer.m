@@ -4,6 +4,7 @@
 
 @interface iTermMetalRendererTransientState()
 @property (nonatomic, readwrite, strong) id<MTLRenderPipelineState> pipelineState;
+@property (nonatomic, readwrite) CGFloat scale;
 @end
 
 @implementation iTermMetalRendererTransientState
@@ -55,11 +56,13 @@
 #pragma mark - Protocol Methods
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
                                  completion:(void (^)(__kindof iTermMetalRendererTransientState * _Nonnull))completion {
     iTermMetalRendererTransientState *tState = [[self.transientStateClass alloc] init];
     tState.pipelineState = [self newPipelineState];
     tState.viewportSize = viewportSize;
+    tState.scale = scale;
     completion(tState);
 }
 

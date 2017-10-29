@@ -55,10 +55,11 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                                    cellSize:(CGSize)cellSize
                                    gridSize:(VT100GridSize)gridSize
                               commandBuffer:(nonnull id<MTLCommandBuffer>)commandBuffer completion:(nonnull void (^)(__kindof iTermMetalCellRendererTransientState * _Nonnull))completion {
-    [super createTransientStateForViewportSize:viewportSize commandBuffer:commandBuffer completion:^(__kindof iTermMetalRendererTransientState * _Nonnull transientState) {
+    [super createTransientStateForViewportSize:viewportSize scale:scale commandBuffer:commandBuffer completion:^(__kindof iTermMetalRendererTransientState * _Nonnull transientState) {
         iTermMetalCellRendererTransientState *tState = transientState;
         tState.piuElementSize = _piuElementSize;
         tState.gridSize = gridSize;

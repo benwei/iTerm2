@@ -15,6 +15,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) BOOL selecting;
 @end
 
+@interface iTermFrameCursorRendererTransientState : iTermCursorRendererTransientState
+@property (nonatomic, strong) id<MTLTexture> texture;
+@end
+
 @implementation iTermCopyModeCursorRendererTransientState
 
 - (NSImage *)newImage {
@@ -22,7 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 
     [image lockFocus];
     const CGFloat heightFraction = 1 / 3.0;
-    const CGFloat scale = 2;
+    const CGFloat scale = self.scale;
     NSRect rect = NSMakeRect(scale / 2,
                              scale / 2,
                              self.cellSize.width,
@@ -47,6 +51,29 @@ NS_ASSUME_NONNULL_BEGIN
     [[NSColor blackColor] set];
     [path setLineWidth:scale];
     [path stroke];
+    [image unlockFocus];
+
+    return image;
+}
+
+@end
+
+@implementation iTermFrameCursorRendererTransientState
+
+- (NSImage *)newImage {
+    NSImage *image = [[NSImage alloc] initWithSize:self.cellSize];
+
+    [image lockFocus];
+    NSRect rect = NSMakeRect(0,
+                             0,
+                             self.cellSize.width,
+                             self.cellSize.height);
+    rect = NSInsetRect(rect, self.scale / 2, self.scale / 2);
+    NSBezierPath *path = [NSBezierPath bezierPathWithRect:rect];
+    [path setLineWidth:self.scale];
+    [self.color setStroke];
+    [path stroke];
+
     [image unlockFocus];
 
     return image;
@@ -88,6 +115,12 @@ NS_ASSUME_NONNULL_BEGIN
                                           fragmentFunctionName:@"iTermTextureCursorFragmentShader"];
 }
 
++ (instancetype)newFrameCursorRendererWithDevice:(id<MTLDevice>)device {
+    return [[iTermFrameCursorRenderer alloc] initWithDevice:device
+                                         vertexFunctionName:@"iTermTextureCursorVertexShader"
+                                       fragmentFunctionName:@"iTermTextureCursorFragmentShader"];
+}
+
 - (instancetype)initWithDevice:(id<MTLDevice>)device
             vertexFunctionName:(NSString *)vertexFunctionName
           fragmentFunctionName:(NSString *)fragmentFunctionName {
@@ -115,11 +148,13 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                                    cellSize:(CGSize)cellSize
                                    gridSize:(VT100GridSize)gridSize
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
                                  completion:(void (^)(__kindof iTermMetalCellRendererTransientState * _Nonnull))completion {
     [_cellRenderer createTransientStateForViewportSize:viewportSize
+                                                 scale:scale
                                               cellSize:cellSize
                                               gridSize:gridSize
                                          commandBuffer:commandBuffer
@@ -196,6 +231,52 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)initializeTransientState:(iTermCursorRendererTransientState *)tState {
     [super initializeTransientState:tState];
     tState.vertexBuffer = [_cellRenderer newQuadOfSize:CGSizeMake(tState.cellSize.width, tState.cellSize.height)];
+}
+
+@end
+
+@implementation iTermFrameCursorRenderer {
+    id<MTLTexture> _texture;
+    CGSize _textureSize;
+}
+
+- (Class)transientStateClass {
+    return [iTermFrameCursorRendererTransientState class];
+}
+
+- (void)initializeTransientState:(iTermFrameCursorRendererTransientState *)tState {
+    [super initializeTransientState:tState];
+    tState.vertexBuffer = [_cellRenderer newQuadOfSize:CGSizeMake(tState.cellSize.width,
+                                                                  tState.cellSize.height)];
+    tState.color = _color;
+    if (_texture == nil || !CGSizeEqualToSize(_textureSize, tState.cellSize)) {
+        _texture = [_cellRenderer textureFromImage:[tState newImage]];
+        _textureSize = tState.cellSize;
+    }
+    tState.texture = _texture;
+}
+
+- (void)drawWithRenderEncoder:(id<MTLRenderCommandEncoder>)renderEncoder
+               transientState:(__kindof iTermMetalCellRendererTransientState *)transientState {
+    iTermFrameCursorRendererTransientState *tState = transientState;
+    iTermCursorDescription description = {
+        .origin = {
+            tState.cellSize.width * tState.coord.x,
+            tState.cellSize.height * (tState.gridSize.height - tState.coord.y - 1),
+        },
+    };
+    id<MTLBuffer> descriptionBuffer = [_cellRenderer.device newBufferWithBytes:&description
+                                                                        length:sizeof(description)
+                                                                       options:MTLResourceStorageModeShared];
+    [_cellRenderer drawWithTransientState:tState
+                            renderEncoder:renderEncoder
+                         numberOfVertices:6
+                             numberOfPIUs:tState.gridSize.width
+                            vertexBuffers:@{ @(iTermVertexInputIndexVertices): tState.vertexBuffer,
+                                             @(iTermVertexInputIndexCursorDescription): descriptionBuffer,
+                                             @(iTermVertexInputIndexOffset): tState.offsetBuffer }
+                          fragmentBuffers:@{}
+                                 textures:@{ @(iTermTextureIndexPrimary): tState.texture } ];
 }
 
 @end

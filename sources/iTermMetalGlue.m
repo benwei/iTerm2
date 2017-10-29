@@ -188,10 +188,6 @@ static NSColor *ColorForVector(vector_float4 v) {
         }
         _cursorInfo = [[iTermMetalCursorInfo alloc] init];
 #warning TODO: blinking cursor
-        NSLog(@"Visible range is [%d, %d), have %d lines of scrollback",
-              (int)_visibleRange.start.y,
-              (int)_visibleRange.end.y,
-              (int)_numberOfScrollbackLines);
         NSInteger lineWithCursor = textView.dataSource.cursorY - 1 + _numberOfScrollbackLines;
         if ([self shouldDrawCursor] &&
             textView.cursorVisible &&
@@ -199,7 +195,6 @@ static NSColor *ColorForVector(vector_float4 v) {
             lineWithCursor + 1 < _visibleRange.end.y) {
             const int offset = _visibleRange.start.y - _numberOfScrollbackLines;
             _cursorInfo.cursorVisible = YES;
-            NSLog(@"Cursor is visible on line %d (%d of visible region)", (int)lineWithCursor, (int)(lineWithCursor - _visibleRange.start.y));
             _cursorInfo.type = textView.drawingHelper.cursorType;
             _cursorInfo.coord = VT100GridCoordMake(textView.dataSource.cursorX - 1,
                                                    textView.dataSource.cursorY - 1 - offset);
@@ -233,7 +228,6 @@ static NSColor *ColorForVector(vector_float4 v) {
                 }
             }
         } else {
-            NSLog(@"Cursor is not visible");
             _cursorInfo.cursorVisible = NO;
         }
     }

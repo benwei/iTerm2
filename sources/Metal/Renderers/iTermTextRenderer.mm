@@ -193,11 +193,13 @@ extern "C" {
 }
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                                    cellSize:(CGSize)cellSize
                                    gridSize:(VT100GridSize)gridSize
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
                                  completion:(void (^)(__kindof iTermMetalCellRendererTransientState * _Nonnull))completion {
     [_cellRenderer createTransientStateForViewportSize:viewportSize
+                                                 scale:scale
                                               cellSize:cellSize
                                               gridSize:gridSize
                                          commandBuffer:commandBuffer

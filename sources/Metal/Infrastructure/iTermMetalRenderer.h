@@ -14,6 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
                transientState:(__kindof iTermMetalRendererTransientState *)transientState;
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
                                  completion:(void (^)(__kindof iTermMetalRendererTransientState *transientState))completion;
 
@@ -23,6 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) vector_uint2 viewportSize;
 @property (nonatomic, strong) id<MTLBuffer> vertexBuffer;
 @property (nonatomic, readonly, strong) id<MTLRenderPipelineState> pipelineState;
+@property (nonatomic, readonly) CGFloat scale;
 @end
 
 @interface iTermMetalRenderer : NSObject<iTermMetalRenderer>

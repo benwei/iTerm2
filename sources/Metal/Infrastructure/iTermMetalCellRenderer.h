@@ -15,6 +15,7 @@ extern const CGFloat BOTTOM_MARGIN;
                transientState:(__kindof iTermMetalCellRendererTransientState *)transientState;
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                                    cellSize:(CGSize)cellSize
                                    gridSize:(VT100GridSize)gridSize
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
@@ -51,6 +52,7 @@ extern const CGFloat BOTTOM_MARGIN;
                     transientStateClass:(Class)transientStateClass NS_DESIGNATED_INITIALIZER;
 
 - (void)createTransientStateForViewportSize:(vector_uint2)viewportSize
+                                      scale:(CGFloat)scale
                               commandBuffer:(id<MTLCommandBuffer>)commandBuffer
                                  completion:(void (^)(__kindof iTermMetalRendererTransientState *transientState))completion NS_UNAVAILABLE;
 

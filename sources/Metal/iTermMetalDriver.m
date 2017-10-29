@@ -41,6 +41,7 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
     iTermCursorRenderer *_underlineCursorRenderer;
     iTermCursorRenderer *_barCursorRenderer;
     iTermCursorRenderer *_blockCursorRenderer;
+    iTermCursorRenderer *_frameCursorRenderer;
     iTermCopyModeCursorRenderer *_copyModeCursorRenderer;
 
     // The command Queue from which we'll obtain command buffers
@@ -81,6 +82,7 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
         _underlineCursorRenderer = [iTermCursorRenderer newUnderlineCursorRendererWithDevice:mtkView.device];
         _barCursorRenderer = [iTermCursorRenderer newBarCursorRendererWithDevice:mtkView.device];
         _blockCursorRenderer = [iTermCursorRenderer newBlockCursorRendererWithDevice:mtkView.device];
+        _frameCursorRenderer = [iTermCursorRenderer newFrameCursorRendererWithDevice:mtkView.device];
         _copyModeCursorRenderer = [iTermCursorRenderer newCopyModeCursorRendererWithDevice:mtkView.device];
         _commandQueue = [mtkView.device newCommandQueue];
         _queue = dispatch_queue_create("com.iterm2.metalDriver", NULL);
@@ -187,6 +189,7 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
         [self.nonCellRenderers enumerateObjectsUsingBlock:^(id<iTermMetalRenderer>  _Nonnull renderer, NSUInteger idx, BOOL * _Nonnull stop) {
             dispatch_group_enter(group);
             [renderer createTransientStateForViewportSize:_viewportSize
+                                                    scale:frameData.scale
                                             commandBuffer:commandBuffer
                                                completion:^(__kindof iTermMetalRendererTransientState * _Nonnull tState) {
                                                    if (tState) {
@@ -202,6 +205,7 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
         [self.cellRenderers enumerateObjectsUsingBlock:^(id<iTermMetalCellRenderer>  _Nonnull renderer, NSUInteger idx, BOOL * _Nonnull stop) {
             dispatch_group_enter(group);
             [renderer createTransientStateForViewportSize:_viewportSize
+                                                    scale:frameData.scale
                                                  cellSize:_cellSize
                                                  gridSize:gridSize
                                             commandBuffer:commandBuffer
@@ -255,8 +259,7 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
     CGFloat scale = frameData.scale;
 
     iTermMetalCursorInfo *cursorInfo = [frameData.perFrameState metalDriverCursorInfo];
-    if (cursorInfo.cursorVisible && cursorInfo.shouldDrawText) {
-        NSLog(@"Cursor on line %d of display", cursorInfo.coord.y);
+    if (!cursorInfo.frameOnly && cursorInfo.cursorVisible && cursorInfo.shouldDrawText) {
         iTermMetalRowData *rowWithCursor = frameData.rows[cursorInfo.coord.y];
         iTermMetalGlyphAttributes *glyphAttributes = (iTermMetalGlyphAttributes *)rowWithCursor.attributesData.mutableBytes;
         glyphAttributes[cursorInfo.coord.x].foregroundColor = cursorInfo.textColor;
@@ -333,9 +336,15 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
                              renderEncoder:renderEncoder];
                     break;
                 case CURSOR_BOX:
-                    [self drawCellRenderer:_blockCursorRenderer
-                                 frameData:frameData
-                             renderEncoder:renderEncoder];
+                    if (cursorInfo.frameOnly) {
+                        [self drawCellRenderer:_frameCursorRenderer
+                                     frameData:frameData
+                                 renderEncoder:renderEncoder];
+                    } else {
+                        [self drawCellRenderer:_blockCursorRenderer
+                                     frameData:frameData
+                                 renderEncoder:renderEncoder];
+                    }
                     break;
                 case CURSOR_VERTICAL:
                     [self drawCellRenderer:_barCursorRenderer
@@ -443,7 +452,8 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
         [self updateCursorGuideRendererWithPerFrameState:perFrameState];
     } else if (renderer == _underlineCursorRenderer ||
                renderer == _barCursorRenderer ||
-               renderer == _blockCursorRenderer) {
+               renderer == _blockCursorRenderer ||
+               renderer == _frameCursorRenderer) {
         [self updateCursorRendererWithPerFrameState:perFrameState];
     } else if (renderer == _copyModeCursorRenderer) {
         [self updateCopyModeCursorRendererWithPerFrameState:perFrameState];
@@ -475,6 +485,8 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
             case CURSOR_BOX:
                 [_blockCursorRenderer setCoord:cursorInfo.coord];
                 [_blockCursorRenderer setColor:cursorInfo.cursorColor];
+                [_frameCursorRenderer setCoord:cursorInfo.coord];
+                [_frameCursorRenderer setColor:cursorInfo.cursorColor];
                 break;
             case CURSOR_VERTICAL:
                 [_barCursorRenderer setCoord:cursorInfo.coord];
@@ -501,6 +513,7 @@ static const NSInteger iTermMetalDriverMaximumNumberOfFramesInFlight = 3;
               _underlineCursorRenderer,
               _barCursorRenderer,
               _blockCursorRenderer,
+              _frameCursorRenderer,
               _copyModeCursorRenderer ];
 }
 
